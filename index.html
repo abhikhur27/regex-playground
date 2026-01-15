@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Parser’s Workshop // Regex Playground</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #ffffff;
+            --text: #1a1a1a;
+            --subtle: #f4f4f4;
+            --accent: #0055ff;
+            --highlight: rgba(0, 85, 255, 0.1);
+            --border: #e0e0e0;
+            --mono: 'JetBrains Mono', monospace;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            color: var(--text);
+            line-height: 1.6;
+            background: var(--bg);
+        }
+
+        header {
+            padding: 4rem 10% 2rem 10%;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h1 {
+            font-family: var(--mono);
+            font-weight: 400;
+            font-size: 1.2rem;
+            margin: 0;
+            letter-spacing: -0.02em;
+            text-transform: uppercase;
+        }
+
+        .editorial-note {
+            max-width: 600px;
+            margin-top: 1rem;
+            font-size: 0.95rem;
+            color: #666;
+        }
+
+        main {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            min-height: 80vh;
+        }
+
+        .pane {
+            padding: 4rem 10%;
+            border-right: 1px solid var(--border);
+        }
+
+        .pane:last-child {
+            border-right: none;
+            background: var(--subtle);
+        }
+
+        label {
+            display: block;
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+            color: #999;
+        }
+
+        .input-group {
+            margin-bottom: 3rem;
+        }
+
+        input[type="text"], textarea {
+            width: 100%;
+            border: none;
+            background: transparent;
+            font-family: var(--mono);
+            font-size: 1.1rem;
+            color: var(--text);
+            outline: none;
+            resize: none;
+            padding: 0;
+        }
+
+        input[type="text"] {
+            border-bottom: 2px solid var(--text);
+            padding-bottom: 0.5rem;
+        }
+
+        #display-area {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: var(--mono);
+            font-size: 1.1rem;
+            min-height: 200px;
+        }
+
+        .match {
+            background: var(--highlight);
+            border-bottom: 2px solid var(--accent);
+            color: var(--accent);
+        }
+
+        .explanation-card {
+            margin-bottom: 2rem;
+            padding-left: 1rem;
+            border-left: 2px solid var(--border);
+        }
+
+        .group-tag {
+            font-family: var(--mono);
+            font-size: 0.8rem;
+            background: #e0e0e0;
+            padding: 2px 6px;
+            margin-right: 0.5rem;
+            border-radius: 3px;
+        }
+
+        .empty-state {
+            color: #999;
+            font-style: italic;
+        }
+
+        footer {
+            padding: 2rem 10%;
+            font-size: 0.8rem;
+            font-family: var(--mono);
+            color: #ccc;
+        }
+
+        @media (max-width: 900px) {
+            main { grid-template-columns: 1fr; }
+            .pane { border-right: none; border-bottom: 1px solid var(--border); }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>The Parser’s Atelier</h1>
+    <p class="editorial-note">
+        Regex is more than a way to search but a cross section of string data. 
+        Try to isolate patterns and look deeper within your text.
+    </p>
+</header>
+
+<main>
+    <section class="pane">
+        <div class="input-group">
+            <label>The Expression (Regex)</label>
+            <input type="text" id="regex-input" placeholder="^([A-Z]+)\s(\d+)$" value="(\w+)\s(\d+)">
+        </div>
+
+        <div class="input-group">
+            <label>Source Content</label>
+            <textarea id="text-input" rows="10" placeholder="Enter text to parse...">Match 101&#10;Discovery 202&#10;Engine 303</textarea>
+        </div>
+    </section>
+
+    <section class="pane">
+        <label>Visual Dissection</label>
+        <div id="display-area"></div>
+
+        <div style="margin-top: 4rem;">
+            <label>Capture Group Logic</label>
+            <div id="explanation-area">
+                <p class="empty-state">No active captures found.</p>
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer>
+    &copy; 2026 / Built for GitHub Pages / Minimalist Parsing Engine
+</footer>
+
+<script>
+    const regexInput = document.getElementById('regex-input');
+    const textInput = document.getElementById('text-input');
+    const displayArea = document.getElementById('display-area');
+    const explanationArea = document.getElementById('explanation-area');
+
+    function update() {
+        const regexStr = regexInput.value;
+        const textStr = textInput.value;
+
+        if (!regexStr) {
+            displayArea.innerText = textStr;
+            explanationArea.innerHTML = '<p class="empty-state">Awaiting expression...</p>';
+            return;
+        }
+
+        try {
+            const regex = new RegExp(regexStr, 'g');
+            
+            // 1. Highlight Matches
+            let highlighted = textStr.replace(regex, (match) => {
+                return `<span class="match">${match}</span>`;
+            });
+            displayArea.innerHTML = highlighted;
+
+            // 2. Explain Groups
+            const matches = [...textStr.matchAll(regex)];
+            if (matches.length > 0) {
+                let html = '';
+                // Just analyze the first match for editorial clarity
+                const firstMatch = matches[0];
+                
+                html += `<div class="explanation-card">
+                    <strong>Primary Match:</strong> "${firstMatch[0]}"<br>
+                    <small style="color: #666">The engine identified this as the global pattern match.</small>
+                </div>`;
+
+                if (firstMatch.length > 1) {
+                    for (let i = 1; i < firstMatch.length; i++) {
+                        html += `
+                            <div class="explanation-card">
+                                <span class="group-tag">Group ${i}</span>
+                                <strong>"${firstMatch[i]}"</strong>
+                                <p style="font-size: 0.85rem; margin-top: 0.5rem;">
+                                    Captured the specific substring based on the parenthetical logic in your expression.
+                                </p>
+                            </div>
+                        `;
+                    }
+                } else {
+                    html += `<p class="empty-state">Global match found, but no capture groups defined.</p>`;
+                }
+                explanationArea.innerHTML = html;
+            } else {
+                explanationArea.innerHTML = '<p class="empty-state">No matches found for the current pattern.</p>';
+            }
+
+        } catch (e) {
+            displayArea.innerText = textStr;
+            explanationArea.innerHTML = `<p style="color: red; font-family: var(--mono); font-size: 0.8rem;">Syntax Error: ${e.message}</p>`;
+        }
+    }
+
+    regexInput.addEventListener('input', update);
+    textInput.addEventListener('input', update);
+
+    // Initial run
+    update();
+</script>
+
+</body>
+</html>
