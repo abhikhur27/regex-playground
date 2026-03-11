@@ -1,0 +1,201 @@
+const patternInput = document.getElementById('pattern');
+const sourceInput = document.getElementById('source');
+const runButton = document.getElementById('run');
+const copyButton = document.getElementById('copy');
+const sampleButton = document.getElementById('sample-email');
+const errorEl = document.getElementById('error');
+const highlightEl = document.getElementById('highlight');
+const matchCountEl = document.getElementById('match-count');
+const activeFlagsEl = document.getElementById('active-flags');
+const matchTable = document.getElementById('match-table');
+const groupsEl = document.getElementById('groups');
+
+function getFlags() {
+  return Array.from(document.querySelectorAll('.flags input:checked'))
+    .map((input) => input.value)
+    .join('');
+}
+
+function escapeHtml(text) {
+  return text
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function collectMatches(regex, text, flags) {
+  const output = [];
+  const iterate = flags.includes('g') || flags.includes('y');
+
+  if (!iterate) {
+    const single = regex.exec(text);
+    if (single) {
+      output.push({
+        value: single[0],
+        index: single.index,
+        length: single[0].length,
+        groups: single.slice(1),
+        namedGroups: single.groups || {},
+      });
+    }
+    return output;
+  }
+
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    output.push({
+      value: match[0],
+      index: match.index,
+      length: match[0].length,
+      groups: match.slice(1),
+      namedGroups: match.groups || {},
+    });
+
+    // Prevent infinite loops on zero-length matches.
+    if (match[0].length === 0) {
+      regex.lastIndex += 1;
+    }
+  }
+
+  return output;
+}
+
+function renderHighlight(text, matches) {
+  if (!matches.length) {
+    highlightEl.innerHTML = escapeHtml(text);
+    return;
+  }
+
+  let pointer = 0;
+  let html = '';
+
+  matches.forEach((match) => {
+    const start = match.index;
+    const end = start + match.length;
+
+    html += escapeHtml(text.slice(pointer, start));
+    html += `<span class="mark">${escapeHtml(text.slice(start, end))}</span>`;
+    pointer = end;
+  });
+
+  html += escapeHtml(text.slice(pointer));
+  highlightEl.innerHTML = html;
+}
+
+function renderTable(matches) {
+  if (!matches.length) {
+    matchTable.innerHTML = '<tr><td colspan="4" class="empty">No matches found.</td></tr>';
+    return;
+  }
+
+  matchTable.innerHTML = matches
+    .map(
+      (match, index) => `
+        <tr>
+          <td>${index + 1}</td>
+          <td><code>${escapeHtml(match.value)}</code></td>
+          <td>${match.index}</td>
+          <td>${match.length}</td>
+        </tr>
+      `
+    )
+    .join('');
+}
+
+function renderGroups(matches) {
+  if (!matches.length) {
+    groupsEl.innerHTML = '<p class="empty">No capture groups to show.</p>';
+    return;
+  }
+
+  const cards = matches.map((match, index) => {
+    const positional = match.groups.length
+      ? match.groups
+          .map((value, groupIndex) => `<div>Group ${groupIndex + 1}: <code>${escapeHtml(String(value))}</code></div>`)
+          .join('')
+      : '<div>No positional groups.</div>';
+
+    const namedEntries = Object.entries(match.namedGroups || {});
+    const named = namedEntries.length
+      ? `<div>Named: ${namedEntries
+          .map(([name, value]) => `<code>${escapeHtml(name)}=${escapeHtml(String(value))}</code>`)
+          .join(', ')}</div>`
+      : '<div>No named groups.</div>';
+
+    return `
+      <article class="group-card">
+        <strong>Match ${index + 1}</strong>
+        <div><code>${escapeHtml(match.value)}</code></div>
+        ${positional}
+        ${named}
+      </article>
+    `;
+  });
+
+  groupsEl.innerHTML = cards.join('');
+}
+
+function runRegex() {
+  const pattern = patternInput.value;
+  const source = sourceInput.value;
+  const flags = getFlags();
+
+  activeFlagsEl.textContent = flags || '(none)';
+  errorEl.textContent = '';
+
+  if (!pattern) {
+    matchCountEl.textContent = '0';
+    highlightEl.innerHTML = escapeHtml(source);
+    matchTable.innerHTML = '<tr><td colspan="4" class="empty">Enter a pattern to begin.</td></tr>';
+    groupsEl.innerHTML = '<p class="empty">No capture groups to show.</p>';
+    return;
+  }
+
+  try {
+    const regex = new RegExp(pattern, flags);
+    const matches = collectMatches(regex, source, flags);
+
+    matchCountEl.textContent = String(matches.length);
+    renderHighlight(source, matches);
+    renderTable(matches);
+    renderGroups(matches);
+  } catch (error) {
+    errorEl.textContent = `Regex error: ${error.message}`;
+    matchCountEl.textContent = '0';
+    highlightEl.innerHTML = escapeHtml(source);
+    matchTable.innerHTML = '<tr><td colspan="4" class="empty">Fix the expression and run again.</td></tr>';
+    groupsEl.innerHTML = '<p class="empty">No capture groups to show.</p>';
+  }
+}
+
+function loadEmailSample() {
+  patternInput.value = '(?<user>[a-z0-9._%+-]+)@(?<domain>[a-z0-9.-]+\\.[a-z]{2,})';
+  sourceInput.value = 'alice@example.com\nbob.smith@company.org\ninvalid@';
+
+  document.querySelectorAll('.flags input').forEach((input) => {
+    input.checked = ['g', 'i'].includes(input.value);
+  });
+
+  runRegex();
+}
+
+runButton.addEventListener('click', runRegex);
+copyButton.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(`/${patternInput.value}/${getFlags()}`);
+    errorEl.textContent = 'Pattern copied to clipboard.';
+  } catch (error) {
+    errorEl.textContent = 'Clipboard copy failed in this environment.';
+  }
+});
+sampleButton.addEventListener('click', loadEmailSample);
+
+patternInput.addEventListener('input', runRegex);
+sourceInput.addEventListener('input', runRegex);
+document.querySelectorAll('.flags input').forEach((input) => {
+  input.addEventListener('change', runRegex);
+});
+
+runRegex();
