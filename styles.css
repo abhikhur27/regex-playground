@@ -17,9 +17,7 @@ body {
   margin: 0;
   font-family: "Manrope", "Segoe UI", sans-serif;
   color: var(--text);
-  background:
-    radial-gradient(circle at 15% 10%, rgba(14, 116, 144, 0.16), transparent 30%),
-    var(--bg);
+  background: var(--bg);
 }
 
 .container {
