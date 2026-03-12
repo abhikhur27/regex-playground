@@ -11,6 +11,7 @@ const matchCountEl = document.getElementById('match-count');
 const activeFlagsEl = document.getElementById('active-flags');
 const matchTable = document.getElementById('match-table');
 const groupsEl = document.getElementById('groups');
+const patternNotesEl = document.getElementById('pattern-notes');
 const SNIPPETS_KEY = 'regex_playground_snippets_v1';
 let snippets = loadSnippets();
 
@@ -168,6 +169,38 @@ function renderGroups(matches) {
   groupsEl.innerHTML = cards.join('');
 }
 
+function renderPatternNotes(pattern, flags) {
+  if (!pattern) {
+    patternNotesEl.innerHTML = '<p class="empty">Enter a pattern to see an explanation.</p>';
+    return;
+  }
+
+  const checks = [
+    { test: /\\d/, label: 'Digit matcher', detail: '\\d matches numeric characters.' },
+    { test: /\\w/, label: 'Word matcher', detail: '\\w matches letters, numbers, and underscore.' },
+    { test: /\\s/, label: 'Whitespace matcher', detail: '\\s matches spaces, tabs, and line breaks.' },
+    { test: /\[[^\]]+\]/, label: 'Character class', detail: '[...] matches one character from a set/range.' },
+    { test: /\(\?:/, label: 'Non-capturing group', detail: '(?:...) groups without creating capture indexes.' },
+    { test: /\(\?</, label: 'Named capture', detail: '(?<name>...) creates a named capture group.' },
+    { test: /\(/, label: 'Capturing group', detail: '(...) captures a sub-expression.' },
+    { test: /\|/, label: 'Alternation', detail: 'A|B matches either branch.' },
+    { test: /\+/, label: 'One-or-more quantifier', detail: '+ repeats the previous token at least once.' },
+    { test: /\*/, label: 'Zero-or-more quantifier', detail: '* repeats the previous token zero or more times.' },
+    { test: /\?/, label: 'Optional or lazy marker', detail: '? often marks optional tokens or lazy quantifiers.' },
+    { test: /\^/, label: 'Start anchor', detail: '^ anchors the match at the start of a line/string.' },
+    { test: /\$/, label: 'End anchor', detail: '$ anchors the match at the end of a line/string.' },
+  ];
+
+  const notes = checks.filter((check) => check.test.test(pattern));
+  if (flags) {
+    notes.push({ label: 'Active flags', detail: `Current flags: ${flags}` });
+  }
+
+  patternNotesEl.innerHTML = notes.length
+    ? notes.map((note) => `<article class="group-card"><strong>${note.label}</strong><div>${note.detail}</div></article>`).join('')
+    : '<p class="empty">No common tokens detected yet. Try adding groups, classes, or anchors.</p>';
+}
+
 function runRegex() {
   const pattern = patternInput.value;
   const source = sourceInput.value;
@@ -181,6 +214,7 @@ function runRegex() {
     highlightEl.innerHTML = escapeHtml(source);
     matchTable.innerHTML = '<tr><td colspan="4" class="empty">Enter a pattern to begin.</td></tr>';
     groupsEl.innerHTML = '<p class="empty">No capture groups to show.</p>';
+    renderPatternNotes('', flags);
     return;
   }
 
@@ -192,12 +226,14 @@ function runRegex() {
     renderHighlight(source, matches);
     renderTable(matches);
     renderGroups(matches);
+    renderPatternNotes(pattern, flags);
   } catch (error) {
     errorEl.textContent = `Regex error: ${error.message}`;
     matchCountEl.textContent = '0';
     highlightEl.innerHTML = escapeHtml(source);
     matchTable.innerHTML = '<tr><td colspan="4" class="empty">Fix the expression and run again.</td></tr>';
     groupsEl.innerHTML = '<p class="empty">No capture groups to show.</p>';
+    renderPatternNotes(pattern, flags);
   }
 }
 
