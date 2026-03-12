@@ -2,13 +2,44 @@ const patternInput = document.getElementById('pattern');
 const sourceInput = document.getElementById('source');
 const runButton = document.getElementById('run');
 const copyButton = document.getElementById('copy');
+const saveSnippetButton = document.getElementById('save-snippet');
 const sampleButton = document.getElementById('sample-email');
+const snippetSelect = document.getElementById('snippet-select');
 const errorEl = document.getElementById('error');
 const highlightEl = document.getElementById('highlight');
 const matchCountEl = document.getElementById('match-count');
 const activeFlagsEl = document.getElementById('active-flags');
 const matchTable = document.getElementById('match-table');
 const groupsEl = document.getElementById('groups');
+const SNIPPETS_KEY = 'regex_playground_snippets_v1';
+let snippets = loadSnippets();
+
+function loadSnippets() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SNIPPETS_KEY));
+    if (!Array.isArray(parsed)) return [];
+    return parsed.slice(0, 20);
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveSnippets() {
+  localStorage.setItem(SNIPPETS_KEY, JSON.stringify(snippets.slice(0, 20)));
+}
+
+function renderSnippetSelect() {
+  const options = ['<option value="">Choose a saved snippet...</option>']
+    .concat(
+      snippets.map(
+        (snippet, index) =>
+          `<option value="${index}">${escapeHtml(snippet.label)} (${escapeHtml(snippet.flags || 'none')})</option>`
+      )
+    )
+    .join('');
+
+  snippetSelect.innerHTML = options;
+}
 
 function getFlags() {
   return Array.from(document.querySelectorAll('.flags input:checked'))
@@ -191,6 +222,37 @@ copyButton.addEventListener('click', async () => {
   }
 });
 sampleButton.addEventListener('click', loadEmailSample);
+saveSnippetButton.addEventListener('click', () => {
+  const pattern = patternInput.value.trim();
+  if (!pattern) {
+    errorEl.textContent = 'Cannot save an empty pattern.';
+    return;
+  }
+
+  const flags = getFlags();
+  const source = sourceInput.value;
+  const timestamp = new Date().toLocaleTimeString();
+  const label = pattern.length > 26 ? `${pattern.slice(0, 26)}...` : pattern;
+  snippets.unshift({ label, pattern, flags, source, timestamp });
+  snippets = snippets.slice(0, 20);
+  saveSnippets();
+  renderSnippetSelect();
+  errorEl.textContent = `Saved snippet at ${timestamp}.`;
+});
+snippetSelect.addEventListener('change', () => {
+  const index = Number(snippetSelect.value);
+  if (!Number.isInteger(index) || !snippets[index]) return;
+
+  const snippet = snippets[index];
+  patternInput.value = snippet.pattern;
+  sourceInput.value = snippet.source;
+
+  document.querySelectorAll('.flags input').forEach((input) => {
+    input.checked = snippet.flags.includes(input.value);
+  });
+
+  runRegex();
+});
 
 patternInput.addEventListener('input', runRegex);
 sourceInput.addEventListener('input', runRegex);
@@ -199,3 +261,4 @@ document.querySelectorAll('.flags input').forEach((input) => {
 });
 
 runRegex();
+renderSnippetSelect();
