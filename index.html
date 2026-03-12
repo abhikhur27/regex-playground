@@ -42,6 +42,11 @@ Discovery 202
 Engine 303</textarea>
       </label>
 
+      <label>
+        Replacement String (optional)
+        <input id="replacement" type="text" placeholder="e.g. [$1]">
+      </label>
+
       <div class="button-row">
         <button id="run">Run</button>
         <button id="copy">Copy Pattern</button>
@@ -70,6 +75,9 @@ Engine 303</textarea>
 
       <h2>Highlighted Output</h2>
       <pre id="highlight" class="highlight" aria-label="Highlighted matches"></pre>
+
+      <h2>Replacement Preview</h2>
+      <pre id="replace-preview" class="highlight" aria-label="Replacement output"></pre>
 
       <h2>Match Table</h2>
       <div class="table-wrap">

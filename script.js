@@ -1,5 +1,6 @@
 const patternInput = document.getElementById('pattern');
 const sourceInput = document.getElementById('source');
+const replacementInput = document.getElementById('replacement');
 const runButton = document.getElementById('run');
 const copyButton = document.getElementById('copy');
 const saveSnippetButton = document.getElementById('save-snippet');
@@ -7,6 +8,7 @@ const sampleButton = document.getElementById('sample-email');
 const snippetSelect = document.getElementById('snippet-select');
 const errorEl = document.getElementById('error');
 const highlightEl = document.getElementById('highlight');
+const replacePreviewEl = document.getElementById('replace-preview');
 const matchCountEl = document.getElementById('match-count');
 const activeFlagsEl = document.getElementById('active-flags');
 const matchTable = document.getElementById('match-table');
@@ -116,6 +118,21 @@ function renderHighlight(text, matches) {
   highlightEl.innerHTML = html;
 }
 
+function renderReplacement(text, pattern, flags, replacement) {
+  if (!pattern) {
+    replacePreviewEl.innerHTML = escapeHtml(text);
+    return;
+  }
+
+  try {
+    const regex = new RegExp(pattern, flags);
+    const replaced = text.replace(regex, replacement);
+    replacePreviewEl.innerHTML = escapeHtml(replaced);
+  } catch (error) {
+    replacePreviewEl.innerHTML = escapeHtml(text);
+  }
+}
+
 function renderTable(matches) {
   if (!matches.length) {
     matchTable.innerHTML = '<tr><td colspan="4" class="empty">No matches found.</td></tr>';
@@ -205,6 +222,7 @@ function runRegex() {
   const pattern = patternInput.value;
   const source = sourceInput.value;
   const flags = getFlags();
+  const replacement = replacementInput.value;
 
   activeFlagsEl.textContent = flags || '(none)';
   errorEl.textContent = '';
@@ -212,6 +230,7 @@ function runRegex() {
   if (!pattern) {
     matchCountEl.textContent = '0';
     highlightEl.innerHTML = escapeHtml(source);
+    replacePreviewEl.innerHTML = escapeHtml(source);
     matchTable.innerHTML = '<tr><td colspan="4" class="empty">Enter a pattern to begin.</td></tr>';
     groupsEl.innerHTML = '<p class="empty">No capture groups to show.</p>';
     renderPatternNotes('', flags);
@@ -224,6 +243,7 @@ function runRegex() {
 
     matchCountEl.textContent = String(matches.length);
     renderHighlight(source, matches);
+    renderReplacement(source, pattern, flags, replacement);
     renderTable(matches);
     renderGroups(matches);
     renderPatternNotes(pattern, flags);
@@ -231,6 +251,7 @@ function runRegex() {
     errorEl.textContent = `Regex error: ${error.message}`;
     matchCountEl.textContent = '0';
     highlightEl.innerHTML = escapeHtml(source);
+    replacePreviewEl.innerHTML = escapeHtml(source);
     matchTable.innerHTML = '<tr><td colspan="4" class="empty">Fix the expression and run again.</td></tr>';
     groupsEl.innerHTML = '<p class="empty">No capture groups to show.</p>';
     renderPatternNotes(pattern, flags);
@@ -292,6 +313,7 @@ snippetSelect.addEventListener('change', () => {
 
 patternInput.addEventListener('input', runRegex);
 sourceInput.addEventListener('input', runRegex);
+replacementInput.addEventListener('input', runRegex);
 document.querySelectorAll('.flags input').forEach((input) => {
   input.addEventListener('change', runRegex);
 });
