@@ -3,6 +3,7 @@ const sourceInput = document.getElementById('source');
 const replacementInput = document.getElementById('replacement');
 const runButton = document.getElementById('run');
 const copyButton = document.getElementById('copy');
+const copyReplaceButton = document.getElementById('copy-replace');
 const saveSnippetButton = document.getElementById('save-snippet');
 const sampleButton = document.getElementById('sample-email');
 const snippetSelect = document.getElementById('snippet-select');
@@ -279,6 +280,14 @@ copyButton.addEventListener('click', async () => {
   }
 });
 sampleButton.addEventListener('click', loadEmailSample);
+copyReplaceButton.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(replacePreviewEl.textContent || '');
+    errorEl.textContent = 'Replacement output copied.';
+  } catch (error) {
+    errorEl.textContent = 'Clipboard copy failed in this environment.';
+  }
+});
 saveSnippetButton.addEventListener('click', () => {
   const pattern = patternInput.value.trim();
   if (!pattern) {
