@@ -1,4 +1,4 @@
-# Regex Playground Pro
+﻿# Regex Playground
 
 Interactive regex debugger focused on readability and safe text handling.
 
